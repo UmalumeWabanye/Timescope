@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Timescope</title>
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='6' width='20' height='20' rx='3' fill='none' stroke='%23191817' stroke-width='2.5'/%3E%3Crect x='9' y='3' width='20' height='20' rx='3' fill='%23191817'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="bar-inner">
+      <span class="wordmark">Timescope</span>
+      <span class="bar-meta" id="span-label"></span>
+      <form method="post" action="/logout" id="logout" hidden>
+        <button class="button plain" type="submit">Sign out</button>
+      </form>
+      <label class="button primary">
+        Add photos
+        <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple hidden>
+      </label>
+    </div>
+  </header>
+
+  <main>
+    <section id="empty" class="empty" hidden>
+      <h1>No photos yet</h1>
+      <p>Add photos of yourself from different years. They're sorted by date and played back in order as a timelapse.</p>
+      <label class="button primary">
+        Choose photos…
+        <input type="file" class="file-input-alt" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple hidden>
+      </label>
+      <p class="muted small">You can also drop files anywhere on this window.</p>
+    </section>
+
+    <section id="player" class="player" hidden>
+      <div class="viewer">
+        <div class="stage">
+          <canvas id="canvas" width="1080" height="1080"></canvas>
+        </div>
+        <div class="transport">
+          <button class="button icon" id="play" aria-label="Play">
+            <svg class="i-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z"/></svg>
+            <svg class="i-pause" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 3h3v10H4zM9 3h3v10H9z"/></svg>
+          </button>
+          <div class="track">
+            <input type="range" id="scrub" min="0" max="1000" value="0" step="1" aria-label="Timeline position">
+            <div class="ticks" id="ticks"></div>
+          </div>
+          <span class="counter" id="counter">0 / 0</span>
+        </div>
+      </div>
+
+      <aside class="inspector">
+        <section>
+          <h2>Playback</h2>
+          <label class="row">
+            <span>Speed</span>
+            <select id="opt-speed">
+              <option value="0.15">0.15 s / photo</option>
+              <option value="0.3">0.3 s / photo</option>
+              <option value="0.6">0.6 s / photo</option>
+              <option value="1.2">1.2 s / photo</option>
+              <option value="2.5">2.5 s / photo</option>
+            </select>
+          </label>
+          <label class="check"><input type="checkbox" id="opt-fade"><span>Crossfade</span></label>
+          <label class="check"><input type="checkbox" id="opt-loop"><span>Loop</span></label>
+        </section>
+
+        <section>
+          <h2>Frame</h2>
+          <label class="row">
+            <span>Shape</span>
+            <select id="opt-format">
+              <option value="square">Square 1:1</option>
+              <option value="portrait">Portrait 4:5</option>
+              <option value="story">Story 9:16</option>
+              <option value="landscape">Wide 16:9</option>
+            </select>
+          </label>
+          <label class="check"><input type="checkbox" id="opt-date"><span>Show date</span></label>
+          <label class="row">
+            <span>Birthday</span>
+            <input type="date" id="opt-birthday">
+          </label>
+          <p class="muted small">Optional. Adds your age next to the date.</p>
+        </section>
+
+        <section>
+          <h2>Export</h2>
+          <p class="muted small">Plays the timelapse once and saves it as a video. Keep this tab in view while it records.</p>
+          <button class="button" id="export"><span>Export video</span></button>
+        </section>
+      </aside>
+    </section>
+
+    <section id="gallery" class="library" hidden>
+      <header class="library-head">
+        <h2>Library</h2>
+        <p class="muted">Select a photo to change its date or line it up with the others.</p>
+      </header>
+      <div id="years"></div>
+    </section>
+  </main>
+
+  <!-- Review staged uploads -->
+  <dialog id="review" class="sheet">
+    <form method="dialog" class="sheet-inner">
+      <header class="sheet-head">
+        <h2 id="review-title">Add photos</h2>
+        <button class="button icon plain" value="cancel" aria-label="Close"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+      </header>
+      <p class="muted">Dates are read from each photo's camera data when it has any, otherwise from the file. Check them before adding.</p>
+      <ul id="review-list" class="review-list"></ul>
+      <footer class="sheet-foot">
+        <span id="review-status" class="muted"></span>
+        <button class="button" value="cancel">Cancel</button>
+        <button class="button primary" id="review-upload" type="button">Add to library</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- Edit / align a photo -->
+  <dialog id="editor" class="sheet wide">
+    <form method="dialog" class="sheet-inner">
+      <header class="sheet-head">
+        <h2>Edit photo</h2>
+        <button class="button icon plain" value="cancel" aria-label="Close"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+      </header>
+      <div class="editor-body">
+        <div class="editor-stage">
+          <canvas id="editor-canvas" width="1080" height="1080"></canvas>
+        </div>
+        <div class="editor-side">
+          <section>
+            <h3>Position</h3>
+            <p class="muted small">Drag the photo to move it, scroll to zoom. Line your eyes up with the horizontal guide.</p>
+            <label class="row"><span>Zoom</span><input type="range" id="ed-scale" min="0.5" max="4" step="0.01"></label>
+            <label class="row"><span>Tilt</span><input type="range" id="ed-rotate" min="-30" max="30" step="0.1"></label>
+            <label class="check"><input type="checkbox" id="ed-onion" checked><span>Show previous photo</span></label>
+            <label class="row"><span>Opacity</span><input type="range" id="ed-onion-amt" min="0.1" max="0.8" step="0.01" value="0.4"></label>
+            <label class="check"><input type="checkbox" id="ed-guides" checked><span>Show guides</span></label>
+            <button class="button small" type="button" id="ed-reset">Reset position</button>
+          </section>
+          <section>
+            <h3>Details</h3>
+            <label class="row"><span>Date</span><input type="date" id="ed-date" required></label>
+            <label class="stack"><span>Note</span><input type="text" id="ed-caption" maxlength="200" placeholder="Optional"></label>
+          </section>
+        </div>
+      </div>
+      <footer class="sheet-foot">
+        <button class="button danger" type="button" id="ed-delete">Delete…</button>
+        <span class="spacer"></span>
+        <button class="button" value="cancel">Cancel</button>
+        <button class="button primary" type="button" id="ed-save">Save</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <div id="drop-overlay" class="drop-overlay" hidden><p>Drop to add photos</p></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

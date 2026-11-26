@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Sign in · Timescope</title>
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='6' width='20' height='20' rx='3' fill='none' stroke='%23191817' stroke-width='2.5'/%3E%3Crect x='9' y='3' width='20' height='20' rx='3' fill='%23191817'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="login">
+    <form method="post" action="/login" class="login-form">
+      <span class="wordmark">Timescope</span>
+      <label class="stack">
+        <span>Password</span>
+        <input type="password" name="password" autocomplete="current-password" required autofocus>
+      </label>
+      <p class="login-error" id="error" role="alert" hidden></p>
+      <button class="button primary" type="submit">Sign in</button>
+    </form>
+  </main>
+  <script>
+    const code = new URLSearchParams(location.search).get('error');
+    const messages = {
+      wrong: 'That password isn’t right.',
+      locked: 'Too many attempts. Try again in 15 minutes.',
+    };
+    if (messages[code]) {
+      const el = document.getElementById('error');
+      el.textContent = messages[code];
+      el.hidden = false;
+    }
+  </script>
+</body>
+</html>
